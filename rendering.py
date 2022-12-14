@@ -57,13 +57,6 @@ def perspective(fov, aspect, near, far):
                      [0,0,(far+near)/(far-near),-2*far*near/(far-near)],
                      [0,0,1,0]], dtype=np.float32)
 
-def inverse_transform(transform):
-    inv = np.eye(4)
-    rot = transform[:3,:3].T
-    inv[:3,:3] = rot
-    inv[:3,3] = -rot.dot(transform[:3,3])
-    return inv
-
 class Transform:
     def __init__(self):
         self._position = np.zeros(3)
@@ -120,8 +113,13 @@ class Transform:
     @property
     def inv_matrix(self):
         matrix = np.eye(4)
-        matrix[:3,:3] = (np.eye(3)/self.scale).dot(self._rotation.mat().T)
-        matrix[:3, 3] = matrix[:3,:3].dot(self._position)
+        matrix[:3,3] = -self._position
+        scale = np.eye(4)
+        scale[:3,:3] /= self.scale
+        matrix = scale.dot(matrix)
+        rot = np.eye(4)
+        rot[:3,:3] = self.rotation.inv().mat()
+        matrix = rot.dot(matrix)
         return matrix
 
     
@@ -231,8 +229,8 @@ class Viewer:
             self.transform.z = z
         if rotation is not None:
             self.transform.rotation = rotation
-        self.prog['view'] = tuple(np.hstack(inverse_transform(self.transform.matrix).T))
-        self.unlit['view'] = tuple(np.hstack(inverse_transform(self.transform.matrix).T))
+        self.prog['view'] = tuple(np.hstack(self.transform.inv_matrix.T))
+        self.unlit['view'] = tuple(np.hstack(self.transform.inv_matrix.T))
 
     def _get_frame(self):
         data = self.ctx.fbo.read()
@@ -248,3 +246,12 @@ class Viewer:
     
     def close(self):
         pg.quit()
+
+if __name__ == "__main__":
+    from numpy.linalg import inv
+    trans = Transform()
+    trans.position = -2,2,3
+    trans.rotation = Quaternion.from_euler(-.5,-.2,.3)
+    trans.scale = 5.0
+
+    print(np.sum(np.abs(trans.inv_matrix) - np.abs(inv(trans.matrix))))
