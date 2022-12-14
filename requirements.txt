@@ -1,0 +1,9 @@
+numpy
+scipy
+matplotlib
+jsbsim
+moderngl
+pygame
+gym
+torch
+tensorboard
