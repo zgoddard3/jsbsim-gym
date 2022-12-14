@@ -140,7 +140,7 @@ class RenderObject:
 
 class Grid(RenderObject):
     def __init__(self, ctx : mgl.Context, program, n, spacing):
-        super().__init__()
+        super().__init__(None)
         low = -(n-1)*spacing/2
         high = -low
         vertices = []

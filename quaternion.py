@@ -35,11 +35,14 @@ class Quaternion:
                         [2*(x*z-y*w), 2*(y*z+x*w), 1-2*(x**2+y**2)]])
     
     @classmethod
-    def from_euler(cls, phi, theta, psi):
+    def from_euler(cls, phi, theta, psi, mode=0):
         q1 = Quaternion(np.cos(phi/2), np.sin(phi/2), 0, 0)
         q2 = Quaternion(np.cos(theta/2), 0, np.sin(theta/2), 0)
         q3 = Quaternion(np.cos(psi/2), 0, 0, np.sin(psi/2))
-        return q1*q2*q3
+        if mode == 0:
+            return q3*q2*q1
+        else:
+            return q2*q1*q3
     
     def __repr__(self):
         return f"<Quaternion: w={self.w}, x={self.x}, y={self.y}, z={self.z}>"
