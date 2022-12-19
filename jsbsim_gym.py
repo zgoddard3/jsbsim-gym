@@ -1,3 +1,4 @@
+from importlib_metadata import entry_points
 import jsbsim
 import gym
 
@@ -21,10 +22,49 @@ state_format = [
     "attitude/psi-rad",
 ]
 
+low = np.array([
+    -np.inf,
+    -np.inf,
+    0,
+    0,
+    -np.pi,
+    -np.pi,
+    -np.inf,
+    -np.inf,
+    -np.inf,
+    -np.pi,
+    -np.pi,
+    -np.pi,
+    -np.inf,
+    -np.inf,
+    0,
+])
+
+high = np.array([
+    np.inf,
+    np.inf,
+    np.inf,
+    np.inf,
+    np.pi,
+    np.pi,
+    np.inf,
+    np.inf,
+    np.inf,
+    np.pi,
+    np.pi,
+    np.pi,
+    np.inf,
+    np.inf,
+    np.inf,
+])
+
 RADIUS = 6.3781e6
 
 class JSBSimEnv(gym.Env):
     def __init__(self, root='.'):
+        super().__init__()
+        self.observation_space = gym.spaces.Box(low, high, (15,))
+        self.action_space = gym.spaces.Box(np.array([-1,-1,-1,0]), 1, (4,))
         self.simulation = jsbsim.FGFDMExec(root, None)
         self.simulation.set_debug_level(0)
         self.simulation.load_model('f16')
@@ -153,6 +193,34 @@ class JSBSimEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+
+class PositionReward(gym.Wrapper):
+    def __init__(self, env, gain):
+        super().__init__(env)
+        self.gain = gain
+    
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        displacement = obs[-3:] - obs[:3]
+        distance = np.linalg.norm(displacement)
+        reward += self.gain * (self.last_distance - distance)
+        self.last_distance = distance
+        return obs, reward, done, info
+    
+    def reset(self):
+        obs = super().reset()
+        displacement = obs[-3:] - obs[:3]
+        self.last_distance = np.linalg.norm(displacement)
+        return obs
+
+def wrap_jsbsim(**kwargs):
+    return PositionReward(JSBSimEnv(**kwargs))
+
+gym.register(
+    id="JSBSim-v0",
+    entry_point=JSBSimEnv,
+    max_episode_steps=1200
+)
 
 if __name__ == "__main__":
     from time import sleep

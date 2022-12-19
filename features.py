@@ -3,7 +3,7 @@ import torch as th
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 class JSBSimFeatureExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space, scale=1e-4):
+    def __init__(self, observation_space):
         super().__init__(observation_space, 17)
 
     def forward(self, observations):
@@ -24,8 +24,7 @@ class JSBSimFeatureExtractor(BaseFeaturesExtractor):
         rel_bearing = abs_bearing - psi
 
         # We normalize distance this way to bound it between 0 and 1
-        # Note this distance is still in lat/long radians so we scale it up a bit
-        dist_norm = 1/(1+1000*distance)
+        dist_norm = 1/(1+distance*1e-3)
 
         # Normalize these by approximate flight ceiling
         dz_norm = dz/15000
