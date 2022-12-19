@@ -131,7 +131,7 @@ class JSBSimEnv(gym.Env):
 
         self._get_state()
 
-        return self.state.copy()
+        return np.hstack([self.state, self.goal])
     
     def render(self):
         scale = 1e-3

@@ -9,18 +9,20 @@ class JSBSimFeatureExtractor(BaseFeaturesExtractor):
     def forward(self, observations):
 
         # Unpack
-        position = observations[:3]
-        mach, alpha, beta = observations[3:6]
-        angular_rates = observations[6:9]
-        phi, theta, psi = observations[9:12]
-        goal = observations[12:]
+        position = observations[:,:3]
+        mach = observations[:,3:4]
+        alpha_beta = observations[:,4:6]
+        angular_rates = observations[:,6:9]
+        phi_theta = observations[:,9:11]
+        psi =  observations[:,11:12]
+        goal = observations[:,12:]
 
         # Transform position
         displacement = goal - position
-        distance = th.sqrt(th.sum(displacement[:2]**2))
-        dz = displacement[2]
-        altitude = position[2]
-        abs_bearing = th.atan2(displacement[1], displacement[0])
+        distance = th.sqrt(th.sum(displacement[:,:2]**2, 1, True))
+        dz = displacement[:,2:3]
+        altitude = position[:,2:3]
+        abs_bearing = th.atan2(displacement[:,1:2], displacement[:,0:1])
         rel_bearing = abs_bearing - psi
 
         # We normalize distance this way to bound it between 0 and 1
@@ -31,10 +33,8 @@ class JSBSimFeatureExtractor(BaseFeaturesExtractor):
         alt_norm = altitude/15000
 
         # Angles to Sine/Cosine pairs
-        ca, sa = th.cos(alpha), th.sin(alpha)
-        cb, sb = th.cos(beta), th.sin(beta)
-        cp, sp = th.cos(phi), th.sin(phi)
-        ct, st = th.cos(theta), th.sin(theta)
+        cab, sab = th.cos(alpha_beta), th.sin(alpha_beta)
+        cpt, spt = th.cos(phi_theta), th.sin(phi_theta)
         cr, sr = th.cos(rel_bearing), th.sin(rel_bearing)
 
-        return th.concat([dist_norm, dz_norm, alt_norm, mach, angular_rates, ca, sa, cb, sb, cp, sp, ct, st, cr, sr], 1)
+        return th.concat([dist_norm, dz_norm, alt_norm, mach, angular_rates, cab, sab, cpt, spt, cr, sr], 1)
