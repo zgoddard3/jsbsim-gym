@@ -1,4 +1,3 @@
-from importlib_metadata import entry_points
 import jsbsim
 import gym
 
@@ -90,8 +89,14 @@ class JSBSimEnv(gym.Env):
         self.simulation.set_property_value("fcs/throttle-cmd-norm", throttle)
 
         for _ in range(self.down_sample):
+            # Freeze fuel consumption
             self.simulation.set_property_value("propulsion/tank/contents-lbs", 1000)
             self.simulation.set_property_value("propulsion/tank[1]/contents-lbs", 1000)
+
+            # Set gear up
+            self.simulation.set_property_value("gear/gear-cmd-norm", 0.0)
+            self.simulation.set_property_value("gear/gear-pos-norm", 0.0)
+
             self.simulation.run()
 
         self._get_state()
@@ -117,8 +122,7 @@ class JSBSimEnv(gym.Env):
     def reset(self, seed=None):
         self.simulation.run_ic()
         self.simulation.set_property_value('propulsion/set-running', -1)
-        self.simulation.set_property_value("gear/gear-cmd-norm", 0.0)
-        self.simulation.set_property_value("gear/gear-pos-norm", 0.0)
+        
 
         rng = np.random.default_rng(seed)
         distance = rng.random() * 9000 + 1000
