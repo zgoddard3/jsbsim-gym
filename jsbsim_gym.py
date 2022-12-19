@@ -21,6 +21,8 @@ state_format = [
     "attitude/psi-rad",
 ]
 
+RADIUS = 6.3781e6
+
 class JSBSimEnv(gym.Env):
     def __init__(self, root='.'):
         self.simulation = jsbsim.FGFDMExec(root, None)
@@ -31,6 +33,7 @@ class JSBSimEnv(gym.Env):
         self.down_sample = 4
         self.state = np.zeros(12)
         self.goal = np.zeros(3)
+        self.dg = 100
         self.viewer = None
 
     def _set_initial_conditions(self):
@@ -58,7 +61,7 @@ class JSBSimEnv(gym.Env):
         if self.state[2] < 10:
             reward = -10
             done = True
-        if np.sum((self.state[:2] - self.goal[:2])**2) < 1e-6 and abs(self.state[2] - self.goal[2]) < 100:
+        if np.sqrt(np.sum((self.state[:2] - self.goal[:2])**2)) < self.dg and abs(self.state[2] - self.goal[2]) < self.dg:
             reward = 10
             done = True
         
@@ -67,6 +70,9 @@ class JSBSimEnv(gym.Env):
     def _get_state(self):
         for i, property in enumerate(state_format):
             self.state[i] = self.simulation.get_property_value(property)
+        
+        # Rough conversion to meters. This should be fine near zero lat/long
+        self.state[:2] *= RADIUS
     
     def reset(self, seed=None):
         self.simulation.run_ic()
@@ -75,7 +81,7 @@ class JSBSimEnv(gym.Env):
         self.simulation.set_property_value("gear/gear-pos-norm", 0.0)
 
         rng = np.random.default_rng(seed)
-        distance = rng.random() * .1 + .01
+        distance = rng.random() * 9000 + 1000
         bearing = rng.random() * 2 * np.pi
         altitude = rng.random() * 3000
 
@@ -88,7 +94,7 @@ class JSBSimEnv(gym.Env):
         return self.state.copy()
     
     def render(self):
-        scale = 1e-4
+        scale = 1e-3
 
         if self.viewer is None:
             self.viewer = Viewer(1280, 720)
@@ -96,25 +102,50 @@ class JSBSimEnv(gym.Env):
             f16_mesh = load_mesh(self.viewer.ctx, self.viewer.prog, "f16.obj")
             self.f16 = RenderObject(f16_mesh)
             self.f16.transform.scale = 1/30
-            self.f16.color = 0, 0, .6
+            self.f16.color = 0, 0, .4
+
+            goal_mesh = load_mesh(self.viewer.ctx, self.viewer.prog, "cylinder.obj")
+            self.cylinder = RenderObject(goal_mesh)
+            self.cylinder.transform.scale = scale * 100
+            self.cylinder.color = 0, .4, 0
+
             self.viewer.objects.append(self.f16)
+            self.viewer.objects.append(self.cylinder)
             self.viewer.objects.append(Grid(self.viewer.ctx, self.viewer.unlit, 21, 1.))
         
         # Rough conversion from lat/long to meters
-        x, y = self.state[:2] * 4e7
+        x, y, z = self.state[:3] * scale
 
-        self.f16.transform.z = x * scale
-        self.f16.transform.x = -y * scale
-        self.f16.transform.y = self.state[2] * scale
+        self.f16.transform.z = x 
+        self.f16.transform.x = -y
+        self.f16.transform.y = z
 
-        # print(self.f16.transform.position)
-
-        # rot = Quaternion.from_euler(-self.state[10], -self.state[11], self.state[9], mode=1)
         rot = Quaternion.from_euler(*self.state[9:])
         rot = Quaternion(rot.w, -rot.y, -rot.z, rot.x)
         self.f16.transform.rotation = rot
 
-        self.viewer.set_view(-y * scale, self.state[2] * scale + 1, x * scale - 3, Quaternion.from_euler(np.pi/12, 0, 0, mode=1))
+        # self.viewer.set_view(-y , z + 1, x - 3, Quaternion.from_euler(np.pi/12, 0, 0, mode=1))
+
+        x, y, z = self.goal * scale
+
+        self.cylinder.transform.z = x
+        self.cylinder.transform.x = -y
+        self.cylinder.transform.y = z
+
+        r = self.f16.transform.position - self.cylinder.transform.position
+        rhat = r/np.linalg.norm(r)
+        r += rhat*.5
+        x,y,z = r
+        angle = np.arctan2(-x,-z)
+
+        self.viewer.set_view(x , y, z, Quaternion.from_euler(np.pi/12, angle, 0, mode=1))
+
+        print(self.cylinder.transform.position)
+
+        # print(self.f16.transform.position)
+
+        # rot = Quaternion.from_euler(-self.state[10], -self.state[11], self.state[9], mode=1)
+        
 
         self.viewer.render()
     
