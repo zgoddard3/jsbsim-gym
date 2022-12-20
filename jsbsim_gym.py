@@ -269,7 +269,7 @@ class PositionReward(gym.Wrapper):
 
 # Create entry point to wrapped environment
 def wrap_jsbsim(**kwargs):
-    return PositionReward(JSBSimEnv(**kwargs))
+    return PositionReward(JSBSimEnv(**kwargs), 1e-2)
 
 # Register the wrapped environment
 gym.register(
