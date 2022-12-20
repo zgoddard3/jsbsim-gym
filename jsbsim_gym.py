@@ -222,13 +222,13 @@ class JSBSimEnv(gym.Env):
 
         r = self.f16.transform.position - self.cylinder.transform.position
         rhat = r/np.linalg.norm(r)
-        r += rhat*.5
         x,y,z = r
-        angle = np.arctan2(-x,-z)
+        yaw = np.arctan2(-x,-z)
+        pitch = np.arctan2(-y, np.sqrt(x**2 + z**2))
 
-        self.viewer.set_view(x , y, z, Quaternion.from_euler(np.pi/12, angle, 0, mode=1))
 
-        print(self.cylinder.transform.position)
+        self.viewer.set_view(*(r + self.cylinder.transform.position + rhat + np.array([0, .33, 0])), Quaternion.from_euler(-pitch, yaw, 0, mode=1))
+
 
         # print(self.f16.transform.position)
 
