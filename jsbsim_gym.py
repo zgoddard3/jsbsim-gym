@@ -6,7 +6,8 @@ import numpy as np
 from rendering import Viewer, load_mesh, load_shader, RenderObject, Grid
 from quaternion import Quaternion
 
-state_format = [
+# Initialize format for the environment state vector
+STATE_FORMAT = [
     "position/lat-gc-rad",
     "position/long-gc-rad",
     "position/h-sl-meters",
@@ -21,7 +22,7 @@ state_format = [
     "attitude/psi-rad",
 ]
 
-low = np.array([
+STATE_LOW = np.array([
     -np.inf,
     -np.inf,
     0,
@@ -39,7 +40,7 @@ low = np.array([
     0,
 ])
 
-high = np.array([
+STATE_HIGH = np.array([
     np.inf,
     np.inf,
     np.inf,
@@ -57,18 +58,50 @@ high = np.array([
     np.inf,
 ])
 
+# Radius of the earth
 RADIUS = 6.3781e6
 
 class JSBSimEnv(gym.Env):
+    """
+    ### Description
+    Gym environment using JSBSim to simulate an F-16 aerodynamics model with a
+    simple point-to-point navigation task. The environment terminates when the
+    agent enters a cylinder around the goal or crashes by flying lower than sea
+    level. The goal is initialized at a random location in a cylinder around the
+    agent's starting position. 
+
+    ### Observation
+    The observation is given as the position of the agent, velocity (mach, alpha,
+    beta), angular rates, attitude, and position of the goal (concatenated in
+    that order). Units are meters and radians. 
+
+    ### Action Space
+    Actions are given as normalized body rate commands and throttle command. 
+    These are passed into a low-level PID controller built into the JSBSim model
+    itself. The rate commands should be normalized between [-1, 1] and the 
+    throttle command should be [0, 1].
+
+    ### Rewards
+    A positive reward is given for reaching the goal and a negative reward is 
+    given for crashing. It is recommended to use the PositionReward wrapper 
+    below to eliminate the problem of sparse rewards.
+    """
     def __init__(self, root='.'):
         super().__init__()
-        self.observation_space = gym.spaces.Box(low, high, (15,))
+
+        # Set observation and action space format
+        self.observation_space = gym.spaces.Box(STATE_LOW, STATE_HIGH, (15,))
         self.action_space = gym.spaces.Box(np.array([-1,-1,-1,0]), 1, (4,))
+
+        # Initialize JSBSim
         self.simulation = jsbsim.FGFDMExec(root, None)
         self.simulation.set_debug_level(0)
+
+        # Load F-16 model and set initial conditions
         self.simulation.load_model('f16')
         self._set_initial_conditions()
         self.simulation.run_ic()
+
         self.down_sample = 4
         self.state = np.zeros(12)
         self.goal = np.zeros(3)
@@ -76,6 +109,7 @@ class JSBSimEnv(gym.Env):
         self.viewer = None
 
     def _set_initial_conditions(self):
+        # Set engines running, forward velocity, and altitude
         self.simulation.set_property_value('propulsion/set-running', -1)
         self.simulation.set_property_value('ic/u-fps', 900.)
         self.simulation.set_property_value('ic/h-sl-ft', 5000)
@@ -83,11 +117,13 @@ class JSBSimEnv(gym.Env):
     def step(self, action):
         roll_cmd, pitch_cmd, yaw_cmd, throttle = action
 
+        # Pass control inputs to JSBSim
         self.simulation.set_property_value("fcs/aileron-cmd-norm", roll_cmd)
         self.simulation.set_property_value("fcs/elevator-cmd-norm", pitch_cmd)
         self.simulation.set_property_value("fcs/rudder-cmd-norm", yaw_cmd)
         self.simulation.set_property_value("fcs/throttle-cmd-norm", throttle)
 
+        # We take multiple steps of the simulation per step of the environment
         for _ in range(self.down_sample):
             # Freeze fuel consumption
             self.simulation.set_property_value("propulsion/tank/contents-lbs", 1000)
@@ -99,13 +135,18 @@ class JSBSimEnv(gym.Env):
 
             self.simulation.run()
 
+        # Get the JSBSim state and save to self.state
         self._get_state()
 
         reward = 0
         done = False
+
+        # Check for collision with ground
         if self.state[2] < 10:
             reward = -10
             done = True
+
+        # Check if reached goal
         if np.sqrt(np.sum((self.state[:2] - self.goal[:2])**2)) < self.dg and abs(self.state[2] - self.goal[2]) < self.dg:
             reward = 10
             done = True
@@ -113,17 +154,19 @@ class JSBSimEnv(gym.Env):
         return np.hstack([self.state, self.goal]), reward, done, {}
     
     def _get_state(self):
-        for i, property in enumerate(state_format):
+        # Gather all state properties from JSBSim
+        for i, property in enumerate(STATE_FORMAT):
             self.state[i] = self.simulation.get_property_value(property)
         
         # Rough conversion to meters. This should be fine near zero lat/long
         self.state[:2] *= RADIUS
     
     def reset(self, seed=None):
+        # Rerun initial conditions in JSBSim
         self.simulation.run_ic()
         self.simulation.set_property_value('propulsion/set-running', -1)
         
-
+        # Generate a new goal
         rng = np.random.default_rng(seed)
         distance = rng.random() * 9000 + 1000
         bearing = rng.random() * 2 * np.pi
@@ -133,6 +176,7 @@ class JSBSimEnv(gym.Env):
         self.goal[:2] *= distance
         self.goal[2] = altitude
 
+        # Get state from JSBSim and save to self.state
         self._get_state()
 
         return np.hstack([self.state, self.goal])
@@ -199,6 +243,12 @@ class JSBSimEnv(gym.Env):
             self.viewer = None
 
 class PositionReward(gym.Wrapper):
+    """
+    This wrapper adds an additional reward to the JSBSimEnv. The agent is 
+    rewarded based when movin closer to the goal and penalized when moving away.
+    Staying at the same distance will result in no additional reward. The gain 
+    may be set to weight the importance of this reward.
+    """
     def __init__(self, env, gain):
         super().__init__(env)
         self.gain = gain
@@ -217,15 +267,19 @@ class PositionReward(gym.Wrapper):
         self.last_distance = np.linalg.norm(displacement)
         return obs
 
+# Create entry point to wrapped environment
 def wrap_jsbsim(**kwargs):
     return PositionReward(JSBSimEnv(**kwargs))
 
+# Register the wrapped environment
 gym.register(
     id="JSBSim-v0",
-    entry_point=JSBSimEnv,
+    entry_point=wrap_jsbsim,
     max_episode_steps=1200
 )
 
+# Short example script to create and run the environment with
+# constant action for 1 simulation second.
 if __name__ == "__main__":
     from time import sleep
     env = JSBSimEnv()
