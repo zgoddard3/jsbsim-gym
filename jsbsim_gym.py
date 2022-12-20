@@ -181,7 +181,7 @@ class JSBSimEnv(gym.Env):
 
         return np.hstack([self.state, self.goal])
     
-    def render(self):
+    def render(self, mode='human'):
         scale = 1e-3
 
         if self.viewer is None:
@@ -236,6 +236,9 @@ class JSBSimEnv(gym.Env):
         
 
         self.viewer.render()
+
+        if mode == 'rgb_array':
+            return self.viewer.get_frame()
     
     def close(self):
         if self.viewer is not None:

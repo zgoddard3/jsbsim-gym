@@ -232,7 +232,7 @@ class Viewer:
         self.prog['view'] = tuple(np.hstack(self.transform.inv_matrix.T))
         self.unlit['view'] = tuple(np.hstack(self.transform.inv_matrix.T))
 
-    def _get_frame(self):
+    def get_frame(self):
         data = self.ctx.fbo.read()
         return np.array(bytearray(data)).reshape(self.height, self.width,3)[-1::-1,:,:]
     
