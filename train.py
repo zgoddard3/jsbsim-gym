@@ -14,7 +14,7 @@ log_path = path.join(path.abspath(path.dirname(__file__)), 'logs')
 
 try:
     model = SAC('MlpPolicy', env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log=log_path, gradient_steps=-1, device='cuda')
-    model.learn(4000000)
+    model.learn(3000000)
 finally:
     model.save("models/jsbsim_sac")
     model.save_replay_buffer("models/jsbsim_sac_buffer")
