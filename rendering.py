@@ -238,7 +238,7 @@ class Viewer:
     
     def render(self):
         pg.event.pump()
-        self.ctx.clear(0.1, 0.5, 0.3, 1.0)
+        self.ctx.clear(0.5, 0.5, 0.5, 1.0)
 
         for obj in self.objects:
             obj.render()
