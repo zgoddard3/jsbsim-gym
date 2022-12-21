@@ -22,7 +22,7 @@ while not done:
     render_data = env.render(mode='rgb_array')
     mp4_writer.append_data(render_data)
     if step % 6 == 0:
-        gif_writer.append_data(render_data)
+        gif_writer.append_data(render_data[::2,::2,:])
 
     action, _ = model.predict(obs, deterministic=True)
     obs, _, done, _ = env.step(action)

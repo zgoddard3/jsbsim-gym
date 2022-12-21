@@ -237,6 +237,7 @@ class Viewer:
         return np.array(bytearray(data)).reshape(self.height, self.width,3)[-1::-1,:,:]
     
     def render(self):
+        pg.event.pump()
         self.ctx.clear(0.1, 0.5, 0.3, 1.0)
 
         for obj in self.objects:
