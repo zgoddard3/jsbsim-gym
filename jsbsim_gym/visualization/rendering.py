@@ -1,13 +1,16 @@
 import pygame as pg
 import numpy as np
 import moderngl as mgl
+import os
 
-from quaternion import Quaternion
+from jsbsim_gym.visualization.quaternion import Quaternion
+
+dir_name = os.path.abspath(os.path.dirname(__file__))
 
 def load_shader(ctx : mgl.Context, vertex_filename, frag_filename):
-    with open(vertex_filename) as f:
+    with open(os.path.join(dir_name, vertex_filename)) as f:
         vertex_src = f.read()
-    with open(frag_filename) as f:
+    with open(os.path.join(dir_name + frag_filename)) as f:
         frag_src = f.read()
     
     return ctx.program(vertex_shader=vertex_src, fragment_shader=frag_src)
@@ -18,7 +21,7 @@ def load_mesh(ctx : mgl.Context, program, filename):
     vertices = []
     indices = []
 
-    with open(filename, 'r') as file:
+    with open(os.path.join(dir_name, filename), 'r') as file:
         for line in file:
             if line.startswith('#'): continue
             values = line.split()

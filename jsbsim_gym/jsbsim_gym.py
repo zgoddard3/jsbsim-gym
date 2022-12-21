@@ -3,8 +3,8 @@ import gym
 
 import numpy as np
 
-from rendering import Viewer, load_mesh, load_shader, RenderObject, Grid
-from quaternion import Quaternion
+from .visualization.rendering import Viewer, load_mesh, load_shader, RenderObject, Grid
+from .visualization.quaternion import Quaternion
 
 # Initialize format for the environment state vector
 STATE_FORMAT = [
