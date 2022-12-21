@@ -1,8 +1,8 @@
 import gym
-import jsbsim_gym
+import jsbsim_gym.jsbsim_gym # This line makes sure the environment is registered
 import imageio as iio
 from os import path
-from features import JSBSimFeatureExtractor
+from jsbsim_gym.features import JSBSimFeatureExtractor
 from stable_baselines3 import SAC
 
 policy_kwargs = dict(
@@ -11,7 +11,7 @@ policy_kwargs = dict(
 
 env = gym.make("JSBSim-v0")
 
-model = SAC.load("models/jsbsim_sac", env)
+model = SAC.load("models/jsbsim_sac", env, policy_kwargs=policy_kwargs)
 
 mp4_writer = iio.get_writer("video.mp4", format="ffmpeg", fps=30)
 gif_writer = iio.get_writer("video.gif", format="gif", fps=5)
