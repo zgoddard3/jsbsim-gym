@@ -10,7 +10,7 @@ dir_name = os.path.abspath(os.path.dirname(__file__))
 def load_shader(ctx : mgl.Context, vertex_filename, frag_filename):
     with open(os.path.join(dir_name, vertex_filename)) as f:
         vertex_src = f.read()
-    with open(os.path.join(dir_name + frag_filename)) as f:
+    with open(os.path.join(dir_name, frag_filename)) as f:
         frag_src = f.read()
     
     return ctx.program(vertex_shader=vertex_src, fragment_shader=frag_src)

@@ -11,7 +11,7 @@ policy_kwargs = dict(
 
 env = gym.make("JSBSim-v0")
 
-model = SAC.load("models/jsbsim_sac", env, policy_kwargs=policy_kwargs)
+model = SAC.load("models/jsbsim_sac", env)
 
 mp4_writer = iio.get_writer("video.mp4", format="ffmpeg", fps=30)
 gif_writer = iio.get_writer("video.gif", format="gif", fps=5)
