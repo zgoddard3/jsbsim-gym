@@ -12,6 +12,7 @@ Once the agent is trained, you can watch it fly to a random goal using:
 ```
 python test.py
 ```
+A pretrained agent can also be downloaded [here](https://gtvault-my.sharepoint.com/:u:/g/personal/zgoddard3_gatech_edu/EbN1RfKTwbJBjpAVABg-lY0B7FUTrDE9dD_tKR8VNbw9rg?e=bW4iql) to skip the training step.
 
 ## Important Files
 
