@@ -1,12 +1,12 @@
-numpy
+numpy==1.26
 scipy
 matplotlib
 jsbsim
 moderngl
 pygame
-gym
+gym==0.21
 torch
 tensorboard
-stable-baselines3
+stable-baselines3==1.8
 imageio
 imageio-ffmpeg

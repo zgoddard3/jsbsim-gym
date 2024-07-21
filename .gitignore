@@ -131,6 +131,7 @@ dmypy.json
 # Custom Directories
 .vscode
 logs/
+models/
 
 # Custom File types
 *buffer.zip

@@ -2,6 +2,10 @@
 
 ![image](sample_animation.gif)
 
+## Installation
+
+Required libraries are provided in the `requirements.txt` and are tested for Python 3.9.7.
+
 ## Usage
 
 You can train a Soft Actor-Critic (SAC) agent on the environment by simply running:
